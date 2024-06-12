@@ -4,32 +4,34 @@ import gleam/dict.{type Dict}
 import gleam/list
 import gleam/order
 
-pub opaque type Limiter {
-  Limiter(cache: Dict(String, List(Time)), count: Int, duration: Duration)
+pub opaque type Limiter(a) {
+  Limiter(cache: Dict(a, List(Time)), count: Int, duration: Duration)
 }
 
-pub fn new_limiter(count: Int, size: Duration) -> Limiter {
+pub fn new_limiter(count: Int, size: Duration) -> Limiter(a) {
   Limiter(dict.new(), count, size)
 }
 
-pub fn limit_guard(
-  when limiter: Limiter,
-  with key: String,
-  return consequence: a,
-  otherwise alternetive: fn(Limiter) -> a,
-) -> a {
+pub fn update(limiter: Limiter(a), key: a) -> Limiter(a) {
   let limiter = Limiter(add(limiter, key), limiter.count, limiter.duration)
-  let limiter =
-    Limiter(filter_prev_window(limiter, key), limiter.count, limiter.duration)
 
+  Limiter(filter_prev_window(limiter, key), limiter.count, limiter.duration)
+}
+
+pub fn limit_guard(
+  when limiter: Limiter(a),
+  with key: a,
+  return consequence: b,
+  otherwise alternetive: fn() -> b,
+) -> b {
   let assert Ok(times) = dict.get(limiter.cache, key)
   case list.length(times) < limiter.count {
-    True -> alternetive(limiter)
+    True -> alternetive()
     False -> consequence
   }
 }
 
-fn add(limiter: Limiter, key: String) -> Dict(String, List(Time)) {
+fn add(limiter: Limiter(a), key: a) -> Dict(a, List(Time)) {
   let now = time.now()
 
   case dict.get(limiter.cache, key) {
@@ -43,7 +45,7 @@ fn add(limiter: Limiter, key: String) -> Dict(String, List(Time)) {
   }
 }
 
-fn filter_prev_window(limiter: Limiter, key: String) -> Dict(String, List(Time)) {
+fn filter_prev_window(limiter: Limiter(a), key: a) -> Dict(a, List(Time)) {
   let assert Ok(times) = dict.get(limiter.cache, key)
   let now = time.now()
 

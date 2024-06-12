@@ -4,7 +4,7 @@ import gleam/io
 import glimiter.{type Limiter}
 
 pub type Context {
-  Context(limiters: Dict(String, Limiter))
+  Context(String)
 }
 
 pub type Req {
@@ -12,71 +12,56 @@ pub type Req {
 }
 
 pub fn main() {
+  let ctx = Context("")
   let route = "route1"
-  let req: Req = Req("someIp")
 
-  // Creating our limiters
-  let limiter0 = new_limiter(10, duration.seconds(10))
-  let limiter1 = new_limiter(0, duration.minutes(1))
-  let limiter2 = new_limiter(2, duration.minutes(1))
-  let limiter3 = new_limiter(3, duration.minutes(1))
+  let limiters =
+    dict.from_list([
+      #("limiter1", new_limiter(10, duration.seconds(10))),
+      #("limiter2", new_limiter(1, duration.seconds(10))),
+    ])
 
-  // We add the limiters to some form of context
-  let context =
-    Context(
-      dict.from_list([
-        #("general", limiter0),
-        #("route1", limiter1),
-        #("route2", limiter2),
-        #("route3", limiter3),
-      ]),
-    )
+  let res = handle(route, ctx, limiters)
+  let _limiters = res.1
+}
 
-  let assert Ok(limiter) = dict.get(context.limiters, "general")
-  use limiter <- limit_guard(
-    when: limiter,
-    with: "generalKey",
-    return: Error("Exceeded rate limit"),
-  )
-  let context = Context(dict.insert(context.limiters, "general", limiter))
-
+pub fn handle(
+  route: String,
+  ctx: Context,
+  limiters: Dict(String, Limiter(String)),
+) -> #(Result(String, String), Dict(String, Limiter(String))) {
   case route {
-    "route1" -> handle_route1(req, context)
-    "route2" -> handle_route2(req, context)
-    _ -> handle_route3(req, context)
+    "route1" -> {
+      let assert Ok(limiter) = dict.get(limiters, "limiter1")
+      let limiter = update(limiter, "key")
+      let res = route1(ctx, limiter)
+
+      #(res, dict.insert(limiters, "key", limiter))
+    }
+    "route2" -> {
+      let assert Ok(limiter) = dict.get(limiters, "limiter2")
+      let limiter = update(limiter, "key")
+      let res = route2(ctx, limiter)
+
+      #(res, dict.insert(limiters, "key", limiter))
+    }
+    _ -> {
+      let assert Ok(limiter) = dict.get(limiters, "limiter1")
+      let limiter = update(limiter, "key")
+
+      #(Error("Not found"), dict.insert(limiters, "key", limiter))
+    }
   }
-  |> io.debug
 }
 
-fn handle_route1(req: Req, ctx: Context) {
-  let assert Ok(route_limiter) = dict.get(ctx.limiters, "route1")
-  use _ <- limit_guard(
-    when: route_limiter,
-    with: "route1" <> req.user,
-    return: Error("Route 1 Rate limit exceeded"),
-  )
+fn route1(_ctx: Context, limiter: Limiter(String)) -> Result(String, String) {
+  use <- limit_guard(when: limiter, with: "key", return: Error("Err"))
 
-  Ok("Route 1 Result")
+  Ok("Ok1")
 }
 
-fn handle_route2(req: Req, ctx: Context) {
-  let assert Ok(route_limiter) = dict.get(ctx.limiters, "route2")
-  use _ <- limit_guard(
-    when: route_limiter,
-    with: "route2" <> req.user,
-    return: Error("Route 2 Rate limit exceeded"),
-  )
+fn route2(_ctx: Context, limiter: Limiter(String)) -> Result(String, String) {
+  use <- limit_guard(when: limiter, with: "key", return: Error("Err"))
 
-  Ok("Route 2 Result")
-}
-
-fn handle_route3(req: Req, ctx: Context) {
-  let assert Ok(route_limiter) = dict.get(ctx.limiters, "route3")
-  use _ <- limit_guard(
-    when: route_limiter,
-    with: "route3" <> req.user,
-    return: Error("Route 3 Rate limit exceeded"),
-  )
-
-  Ok("Route 3 Result")
+  Ok("Ok2")
 }
