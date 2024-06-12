@@ -4,8 +4,8 @@ version = "0.0.1"
 # Fill out these fields if you intend to generate HTML documentation or publish
 # your project to the Hex package manager.
 #
-# description = "A simple sliding window limiter in pure gleam"
-# licences = ["Apache-2.0"]
+description = "A simple sliding window limiter in pure gleam"
+licences = ["Apache-2.0"]
 # repository = { type = "github", user = "H-274", repo = "glimiter" }
 # links = [{ title = "Website", href = "https://gleam.run" }]
 #
