@@ -12,10 +12,10 @@ import glimiter
 
 pub fn main() {
   // Creating our limiter to allow 1 request per minute for a given request key
-  let limiter = gleamiter.new_limiter(1, duration.minutes(1))
+  let limiter = glimiter.new_limiter(1, duration.minutes(1))
 
   // Using the guard so that when the limit is exceeded, we return the error
-  use <- gleamiter.limit_guard(
+  use <- glimiter.limit_guard(
     when: limiter,
     with: "RequestKey",
     return: Error("Request limit exceeded"),
