@@ -16,30 +16,34 @@ pub fn limit_guard(
   when limiter: Limiter,
   with key: String,
   return consequence: a,
-  otherwise alternetive: fn() -> a,
+  otherwise alternetive: fn(Limiter) -> a,
 ) -> a {
-  add(limiter, key)
-  filter_prev_window(limiter, key)
+  let limiter = Limiter(add(limiter, key), limiter.count, limiter.duration)
+  let limiter =
+    Limiter(filter_prev_window(limiter, key), limiter.count, limiter.duration)
 
   let assert Ok(times) = dict.get(limiter.cache, key)
   case list.length(times) < limiter.count {
-    True -> alternetive()
+    True -> alternetive(limiter)
     False -> consequence
   }
 }
 
-fn add(limiter: Limiter, key: String) -> Nil {
+fn add(limiter: Limiter, key: String) -> Dict(String, List(Time)) {
   let now = time.now()
 
   case dict.get(limiter.cache, key) {
-    Ok(timestamps) -> dict.insert(limiter.cache, key, [now, ..timestamps])
-    Error(_) -> dict.insert(limiter.cache, key, [now])
-  }
+    Ok(timestamps) -> {
+      dict.insert(limiter.cache, key, [now, ..timestamps])
+    }
 
-  Nil
+    Error(_) -> {
+      dict.insert(limiter.cache, key, [now])
+    }
+  }
 }
 
-fn filter_prev_window(limiter: Limiter, key: String) -> Nil {
+fn filter_prev_window(limiter: Limiter, key: String) -> Dict(String, List(Time)) {
   let assert Ok(times) = dict.get(limiter.cache, key)
   let now = time.now()
 
@@ -52,6 +56,4 @@ fn filter_prev_window(limiter: Limiter, key: String) -> Nil {
       }
     })
   dict.insert(limiter.cache, key, new_times)
-
-  Nil
 }
