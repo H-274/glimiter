@@ -19,7 +19,7 @@ pub fn main() {
   let limiter2 = glimiter.new_limiter(2, duration.minutes(1))
   let limiter3 = glimiter.new_limiter(3, duration.minutes(1))
 
-  // We add the limiters to some form of client
+  // We add the limiters to some form of context
   let context =
     Context(
       dict.from_list([
