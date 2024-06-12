@@ -34,3 +34,8 @@ gleam run   # Run the project
 gleam test  # Run the tests
 gleam shell # Run an Erlang shell
 ```
+
+## More Examples
+
+ - [Single Limiter](https://github.com/H-274/glimiter/blob/main/examples/single_limiter.gleam)
+ - [Multiple Limiters](https://github.com/H-274/glimiter/blob/main/examples/multi_limiter.gleam)
