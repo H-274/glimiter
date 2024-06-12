@@ -6,7 +6,7 @@ version = "0.0.1"
 #
 description = "A simple sliding window limiter in pure gleam"
 licences = ["Apache-2.0"]
-# repository = { type = "github", user = "H-274", repo = "glimiter" }
+repository = { type = "github", user = "H-274", repo = "glimiter" }
 # links = [{ title = "Website", href = "https://gleam.run" }]
 #
 # For a full reference of all the available options, you can have a look at
