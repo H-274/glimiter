@@ -1,61 +1,84 @@
-import birl.{type Time} as time
+import birl.{type Time}
 import birl/duration.{type Duration}
 import gleam/dict.{type Dict}
 import gleam/list
 import gleam/order
+import gleam/result
 
-pub opaque type Limiter(a) {
-  Limiter(cache: Dict(a, List(Time)), count: Int, duration: Duration)
+pub type Window {
+  Window(count: Int, duration: Duration)
 }
 
-pub fn new_limiter(count: Int, size: Duration) -> Limiter(a) {
-  Limiter(dict.new(), count, size)
+pub opaque type Limiter(k) {
+  Limiter(data: Dict(k, List(Time)), window: Window)
 }
 
-pub fn update(limiter: Limiter(a), key: a) -> Limiter(a) {
-  let limiter = Limiter(add(limiter, key), limiter.count, limiter.duration)
-
-  Limiter(filter_prev_window(limiter, key), limiter.count, limiter.duration)
+pub fn new(window: Window) -> Limiter(k) {
+  Limiter(dict.new(), window)
 }
 
-pub fn limit_guard(
-  when limiter: Limiter(a),
-  with key: a,
-  return consequence: b,
-  otherwise alternetive: fn() -> b,
-) -> b {
-  let assert Ok(times) = dict.get(limiter.cache, key)
-  case list.length(times) < limiter.count {
-    True -> alternetive()
-    False -> consequence
+fn increment(limiter: Limiter(k), key: k) -> Limiter(k) {
+  let now = birl.now()
+  let new_list = case dict.get(limiter.data, key) {
+    Ok(list) -> [now, ..list]
+    Error(_) -> [now]
   }
+
+  key_insert(limiter, key, new_list)
 }
 
-fn add(limiter: Limiter(a), key: a) -> Dict(a, List(Time)) {
-  let now = time.now()
-
-  case dict.get(limiter.cache, key) {
-    Ok(timestamps) -> {
-      dict.insert(limiter.cache, key, [now, ..timestamps])
-    }
-
-    Error(_) -> {
-      dict.insert(limiter.cache, key, [now])
-    }
-  }
+fn key_insert(limiter: Limiter(k), key: k, list: List(Time)) {
+  list
+  |> dict.insert(limiter.data, key, _)
+  |> fn(d) { Limiter(..limiter, data: d) }
 }
 
-fn filter_prev_window(limiter: Limiter(a), key: a) -> Dict(a, List(Time)) {
-  let assert Ok(times) = dict.get(limiter.cache, key)
-  let now = time.now()
+fn filter(limiter: Limiter(k), key: k) -> Limiter(k) {
+  let filter_result: Result(List(Time), Nil) = {
+    use list: List(Time) <- result.try(dict.get(limiter.data, key))
 
-  let new_times =
-    list.filter(times, fn(time) {
-      let end_time = time.add(time, limiter.duration)
-      case time.compare(now, end_time) {
-        order.Lt | order.Eq -> True
-        _ -> False
+    let new_list: List(Time) = {
+      use time: Time <- list.filter(list)
+
+      let window_end_time: Time = birl.add(time, limiter.window.duration)
+      case birl.compare(window_end_time, birl.now()) {
+        order.Lt -> False
+        _ -> True
       }
-    })
-  dict.insert(limiter.cache, key, new_times)
+    }
+
+    Ok(new_list)
+  }
+
+  let limiter: Limiter(k) = case filter_result {
+    Ok(new_list) -> key_insert(limiter, key, new_list)
+    _ -> limiter
+  }
+
+  limiter
+}
+
+pub fn update(limiter: Limiter(k), key: k) -> Limiter(k) {
+  let limiter = increment(limiter, key)
+  let limiter = filter(limiter, key)
+
+  limiter
+}
+
+pub fn guard(
+  when key: k,
+  with limiter: Limiter(k),
+  return default: a,
+  otherwise f: fn() -> a,
+) {
+  let result = case dict.get(limiter.data, key) {
+    Ok(list) -> list
+    Error(_) -> []
+  }
+
+  let len = list.length(result)
+  case len > limiter.window.count {
+    True -> default
+    False -> f()
+  }
 }
