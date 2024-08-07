@@ -3,7 +3,7 @@
 [![Package Version](https://img.shields.io/hexpm/v/glimiter)](https://hex.pm/packages/glimiter)
 [![Hex Docs](https://img.shields.io/badge/hex-docs-ffaff3)](https://hexdocs.pm/glimiter/)
 
-### This is meant to be more of a simple proof of concept than anything. I can't figure out a way to make this algorithm work in a real-world scenario using pure gleam (Using wisp for example) because of the immutable nature of gleam
+### /!\ This is meant to be more of a simple proof of concept than anything
 
 ```sh
 gleam add glimiter
