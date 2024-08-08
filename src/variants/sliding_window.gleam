@@ -50,10 +50,10 @@ pub fn cleanup(limiter: SlidingWindow(key), key: key) -> SlidingWindow(key) {
 }
 
 pub fn guard(
-  when key: key,
-  with limiter: SlidingWindow(key),
+  given limiter: SlidingWindow(key),
+  with key: key,
   return default: a,
-  otherwise f: fn() -> a,
+  otherwise continue: fn() -> a,
 ) {
   let result = case dict.get(limiter.data, key) {
     Ok(list) -> list
@@ -61,8 +61,8 @@ pub fn guard(
   }
 
   let len = list.length(result)
-  case len > limiter.limit.capacity {
-    True -> default
-    False -> f()
+  case len < limiter.limit.capacity {
+    True -> continue()
+    _ -> default
   }
 }
