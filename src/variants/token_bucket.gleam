@@ -8,10 +8,6 @@ pub fn new(limit: Int) -> TokenBucket(key) {
   Base(dict.new(), limit)
 }
 
-fn update(dict, limit) -> TokenBucket(key) {
-  Base(dict, limit)
-}
-
 pub fn increment(limiter: TokenBucket(key), key: key) -> TokenBucket(key) {
   let count: Int = case dict.get(limiter.data, key) {
     Ok(val) -> val + 1
@@ -19,7 +15,7 @@ pub fn increment(limiter: TokenBucket(key), key: key) -> TokenBucket(key) {
   }
 
   dict.insert(limiter.data, key, count)
-  |> update(limiter.limit)
+  |> Base(limiter.limit)
 }
 
 pub fn decrement(limiter: TokenBucket(key), key: key) -> TokenBucket(key) {
@@ -29,7 +25,7 @@ pub fn decrement(limiter: TokenBucket(key), key: key) -> TokenBucket(key) {
   }
 
   dict.insert(limiter.data, key, count)
-  |> update(limiter.limit)
+  |> Base(limiter.limit)
 }
 
 pub fn guard(
